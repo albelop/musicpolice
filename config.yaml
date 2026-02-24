@@ -1,0 +1,35 @@
+# MusicPolice Configuration
+# Raspberry Pi MIDI Recorder & Piano Journal
+
+midi:
+  # MIDI device name pattern (leave empty to auto-detect first available)
+  device_pattern: ""
+  # Pause threshold in seconds - creates new file after this silence duration
+  pause_threshold: 3.0
+
+favorite:
+  # MIDI notes for favorite key combination (D#7, F#7, G#7 - top 3 black keys)
+  # Adjust these if your piano has a different range
+  key_combo: [87, 90, 92]
+  # Time window (ms) to detect simultaneous key press
+  detection_window_ms: 150
+
+storage:
+  # Base directory for recordings (relative to app directory or absolute path)
+  recordings_dir: "recordings"
+  # Favorites subdirectory name
+  favorites_dir: "favs"
+
+web:
+  # Web server host (0.0.0.0 to allow external access)
+  host: "0.0.0.0"
+  # Web server port
+  port: 5000
+  # Enable debug mode (disable in production)
+  debug: false
+
+logging:
+  # Log level: DEBUG, INFO, WARNING, ERROR
+  level: "INFO"
+  # Log file path (leave empty for stdout only)
+  file: "musicpolice.log"

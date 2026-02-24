@@ -1,0 +1,26 @@
+[Unit]
+Description=MusicPolice MIDI Recorder
+Documentation=https://github.com/your-repo/musicpolice
+After=network.target sound.target
+
+[Service]
+Type=simple
+User=pi
+Group=audio
+WorkingDirectory=/home/pi/musicpolice
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/home/pi/musicpolice/venv/bin/python3 /home/pi/musicpolice/recorder.py
+Restart=always
+RestartSec=10
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=musicpolice
+
+# Resource limits
+Nice=-5
+MemoryMax=256M
+
+[Install]
+WantedBy=multi-user.target

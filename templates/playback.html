@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MIDI Playback - MusicPolice</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@magenta/music@^1.23.1"></script>
+    <style>
+        .playback-container {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding: 0;
+        }
+
+        .playback-header {
+            padding: var(--spacing-md) var(--spacing-lg);
+            background: var(--pico-card-background-color);
+            border-bottom: 2px solid var(--pico-border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+            gap: var(--spacing-lg);
+            flex-wrap: wrap;
+        }
+
+        .playback-mode-switch {
+            display: flex;
+            gap: 0;
+            background: var(--bg-card);
+            border-radius: 6px;
+            padding: 4px;
+            border: 1px solid var(--pico-border-color);
+        }
+
+        .playback-mode-switch input[type="radio"] {
+            display: none;
+        }
+
+        .playback-mode-switch label {
+            padding: 6px 14px;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+            margin: 0;
+            white-space: nowrap;
+            color: var(--pico-color);
+        }
+
+        .playback-mode-switch input[type="radio"]:checked + label {
+            background: var(--accent);
+            color: white;
+            font-weight: 600;
+        }
+
+        .playback-mode-switch label:hover {
+            background: var(--bg-primary);
+        }
+
+        .playback-mode-switch input[type="radio"]:checked + label:hover {
+            background: var(--accent-hover);
+        }
+
+        .playback-title-text {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .visualizer-container {
+            flex: 1;
+            background: var(--bg-primary);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #waterfall-canvas {
+            width: 100%;
+            max-width: 1400px;
+            height: 100%;
+            background: var(--bg-primary);
+        }
+
+        .playback-controls-bar {
+            padding: var(--spacing-lg);
+            background: var(--pico-card-background-color);
+            border-top: 2px solid var(--pico-border-color);
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-md);
+            flex-shrink: 0;
+        }
+
+        .controls-row {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-lg);
+        }
+
+        .time-display {
+            font-variant-numeric: tabular-nums;
+            min-width: 120px;
+            font-size: 1.1rem;
+        }
+
+        .control-buttons {
+            display: flex;
+            gap: var(--spacing-sm);
+        }
+
+        .progress-container {
+            flex: 1;
+        }
+
+        .progress-bar-playback {
+            height: 10px;
+            background: var(--bg-card);
+            border-radius: 5px;
+            overflow: hidden;
+            cursor: pointer;
+            border: 1px solid var(--pico-border-color);
+            position: relative;
+        }
+
+        .progress-fill-playback {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), var(--accent-hover));
+            width: 0%;
+            transition: width 0.1s linear;
+            box-shadow: 0 0 10px rgba(233, 69, 96, 0.6);
+        }
+
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--bg-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+
+        .loading-overlay.hidden {
+            display: none;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid var(--pico-border-color);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            color: var(--accent);
+            text-align: center;
+            padding: var(--spacing-xl);
+        }
+
+        @media (max-width: 768px) {
+            .playback-header {
+                flex-direction: column;
+                gap: var(--spacing-sm);
+                align-items: flex-start;
+            }
+
+            .controls-row {
+                flex-direction: column;
+                gap: var(--spacing-md);
+                width: 100%;
+            }
+
+            .control-buttons {
+                justify-content: center;
+                width: 100%;
+            }
+
+            .progress-container {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="playback-container">
+        <!-- Header -->
+        <div class="playback-header">
+            <h1 class="playback-title-text" id="file-title">Loading...</h1>
+            <div class="playback-mode-switch">
+                <input type="radio" id="mode-browser" name="playback-mode" value="browser" checked>
+                <label for="mode-browser">🔊 Browser</label>
+                
+                <input type="radio" id="mode-piano" name="playback-mode" value="piano">
+                <label for="mode-piano">🎹 Piano</label>
+                
+                <input type="radio" id="mode-both" name="playback-mode" value="both">
+                <label for="mode-both">🔊🎹 Both</label>
+            </div>
+            <a href="/" role="button" class="btn">← Back to Journal</a>
+        </div>
+
+        <!-- Visualizer -->
+        <div class="visualizer-container">
+            <div class="loading-overlay" id="loading-overlay">
+                <div>
+                    <div class="spinner"></div>
+                    <p style="margin-top: var(--spacing-md); text-align: center;">Loading MIDI file...</p>
+                </div>
+            </div>
+            <div class="error-message hidden" id="error-message"></div>
+            <svg id="waterfall-canvas"></svg>
+        </div>
+
+        <!-- Controls -->
+        <div class="playback-controls-bar">
+            <div class="controls-row">
+                <div class="time-display" id="time-display">0:00 / 0:00</div>
+                <div class="control-buttons">
+                    <button class="btn btn-control" id="btn-restart" title="Restart">⏮</button>
+                    <button class="btn btn-control btn-primary" id="btn-play-pause" title="Play/Pause">▶</button>
+                    <button class="btn btn-control" id="btn-stop" title="Stop">⏹</button>
+                </div>
+                <div class="progress-container">
+                    <div class="progress-bar-playback" id="progress-bar">
+                        <div class="progress-fill-playback" id="progress-fill"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/playback-page.js"></script>
+</body>
+</html>

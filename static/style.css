@@ -1,0 +1,665 @@
+/* MusicPolice - Piano Journal Styles */
+/* Built on top of Pico CSS for a minimal, modern look */
+
+:root {
+    /* Override Pico colors with custom theme */
+    --pico-background-color: #1a1a2e;
+    --pico-color: #eaeaea;
+    --pico-card-background-color: #16213e;
+    --pico-card-sectioning-background-color: #0f3460;
+    --pico-primary: #e94560;
+    --pico-primary-hover: #ff6b6b;
+    --pico-secondary: #4ecca3;
+    --pico-muted-color: #a0a0a0;
+    --pico-border-color: #2d2d3a;
+    
+    /* Custom colors */
+    --bg-primary: #1a1a2e;
+    --bg-secondary: #16213e;
+    --bg-card: #0f3460;
+    --text-primary: #eaeaea;
+    --text-secondary: #a0a0a0;
+    --accent: #e94560;
+    --accent-hover: #ff6b6b;
+    --success: #4ecca3;
+    --warning: #ffc107;
+    
+    /* Practice level colors (GitHub-style green gradient) */
+    --level-0: #2d2d3a;
+    --level-1: #0e4429;
+    --level-2: #006d32;
+    --level-3: #26a641;
+    --level-4: #39d353;
+    
+    /* Spacing */
+    --spacing-xs: 0.25rem;
+    --spacing-sm: 0.5rem;
+    --spacing-md: 1rem;
+    --spacing-lg: 1.5rem;
+    --spacing-xl: 2rem;
+    
+    /* Border radius */
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+}
+
+/* Container */
+.container {
+    padding-bottom: 120px; /* Space for playback bar */
+}
+
+/* Header */
+.header {
+    text-align: center;
+    padding: var(--spacing-xl) 0;
+    margin-bottom: var(--spacing-lg);
+}
+
+.header h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: var(--spacing-xs);
+    background: linear-gradient(135deg, var(--accent), var(--success));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.subtitle {
+    color: var(--text-secondary);
+    font-size: 1.1rem;
+}
+
+/* Stats Bar */
+.stats-bar {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: var(--spacing-lg);
+    padding: var(--spacing-xl);
+    background: var(--pico-card-background-color);
+    border-radius: var(--pico-border-radius);
+    margin-bottom: var(--spacing-xl);
+    box-shadow: var(--pico-card-box-shadow);
+}
+
+.stat {
+    text-align: center;
+}
+
+.stat-value {
+    display: block;
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: var(--spacing-xs);
+}
+
+.stat-label {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Download Section */
+.download-section {
+    margin-bottom: var(--spacing-xl);
+}
+
+.download-details {
+    background: var(--pico-card-background-color);
+    border-radius: var(--pico-border-radius);
+    padding: var(--spacing-lg);
+    box-shadow: var(--pico-card-box-shadow);
+}
+
+.download-details summary {
+    font-weight: 600;
+    font-size: 1.1rem;
+    cursor: pointer;
+    user-select: none;
+    padding: var(--spacing-sm);
+    margin: calc(var(--spacing-sm) * -1);
+}
+
+.download-details summary:hover {
+    color: var(--accent);
+}
+
+.download-content {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: var(--spacing-lg);
+    padding-top: var(--spacing-lg);
+    margin-top: var(--spacing-md);
+    border-top: 1px solid var(--pico-border-color);
+}
+
+.download-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+}
+
+.download-group h3 {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}
+
+.btn-download-action {
+    padding: var(--spacing-md);
+    font-size: 0.95rem;
+    text-align: left;
+    background: var(--bg-card);
+    border: 1px solid var(--pico-border-color);
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.btn-download-action:hover:not(:disabled) {
+    background: var(--accent);
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(233, 69, 96, 0.2);
+}
+
+.btn-download-action:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* Main Content */
+.main-content {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spacing-xl);
+    margin-bottom: var(--spacing-xl);
+}
+
+@media (max-width: 900px) {
+    .main-content {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Calendar Section */
+.calendar-section {
+    background: var(--pico-card-background-color);
+    border-radius: var(--pico-border-radius);
+    padding: var(--spacing-xl);
+    box-shadow: var(--pico-card-box-shadow);
+}
+
+.calendar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-xl);
+}
+
+.calendar-header h2 {
+    font-size: 1.5rem;
+    margin: 0;
+}
+
+.calendar-grid {
+    margin-bottom: var(--spacing-lg);
+}
+
+.calendar-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: var(--spacing-xs);
+    text-align: center;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-md);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.calendar-days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: var(--spacing-xs);
+}
+
+.calendar-day {
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm);
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    font-weight: 500;
+}
+
+.calendar-day:hover:not(.empty) {
+    transform: scale(1.15);
+    z-index: 10;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.calendar-day.empty {
+    background: transparent;
+    cursor: default;
+}
+
+.calendar-day.today {
+    box-shadow: 0 0 0 2px var(--accent);
+    font-weight: 700;
+}
+
+.calendar-day.selected {
+    box-shadow: 0 0 0 2px var(--success);
+    font-weight: 700;
+}
+
+/* Practice level colors */
+.calendar-day.level-0 { background: var(--level-0); }
+.calendar-day.level-1 { background: var(--level-1); color: #fff; }
+.calendar-day.level-2 { background: var(--level-2); color: #fff; }
+.calendar-day.level-3 { background: var(--level-3); color: #fff; }
+.calendar-day.level-4 { background: var(--level-4); color: #fff; }
+
+/* Calendar Legend */
+.calendar-legend {
+    display: flex;
+    justify-content: center;
+    gap: var(--spacing-md);
+    flex-wrap: wrap;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    padding-top: var(--spacing-md);
+    border-top: 1px solid var(--pico-border-color);
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+}
+
+.legend-color {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    border: 1px solid var(--pico-border-color);
+}
+
+.legend-color.level-0 { background: var(--level-0); }
+.legend-color.level-1 { background: var(--level-1); }
+.legend-color.level-2 { background: var(--level-2); }
+.legend-color.level-3 { background: var(--level-3); }
+.legend-color.level-4 { background: var(--level-4); }
+
+/* Recordings Section */
+.recordings-section {
+    background: var(--pico-card-background-color);
+    border-radius: var(--pico-border-radius);
+    padding: var(--spacing-xl);
+    max-height: 650px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: var(--pico-card-box-shadow);
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-lg);
+    flex-wrap: wrap;
+    gap: var(--spacing-md);
+}
+
+.section-header h2 {
+    font-size: 1.5rem;
+    margin: 0;
+}
+
+.filter-buttons {
+    display: flex;
+    gap: var(--spacing-sm);
+}
+
+.recordings-list {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+    padding-right: var(--spacing-xs);
+}
+
+/* Custom scrollbar */
+.recordings-list::-webkit-scrollbar {
+    width: 8px;
+}
+
+.recordings-list::-webkit-scrollbar-track {
+    background: var(--bg-primary);
+    border-radius: 4px;
+}
+
+.recordings-list::-webkit-scrollbar-thumb {
+    background: var(--bg-card);
+    border-radius: 4px;
+}
+
+.recordings-list::-webkit-scrollbar-thumb:hover {
+    background: var(--text-secondary);
+}
+
+.recording-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-md);
+    background: var(--bg-card);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--pico-border-color);
+    transition: all 0.2s ease;
+}
+
+.recording-item:hover {
+    background: var(--pico-card-sectioning-background-color);
+    border-color: var(--accent);
+    transform: translateX(4px);
+}
+
+.recording-item.playing {
+    border-left: 3px solid var(--accent);
+    background: var(--pico-card-sectioning-background-color);
+    box-shadow: 0 0 0 1px var(--accent);
+}
+
+.recording-info {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+    flex: 1;
+}
+
+.recording-time {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 1rem;
+}
+
+.recording-duration {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.recording-notes {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.recording-actions {
+    display: flex;
+    gap: var(--spacing-xs);
+    flex-shrink: 0;
+}
+
+/* Buttons - Override Pico defaults for icon buttons */
+.btn {
+    padding: var(--spacing-sm) var(--spacing-md);
+    border: 1px solid var(--pico-border-color);
+    border-radius: var(--pico-border-radius);
+    background: var(--bg-card);
+    color: var(--text-primary);
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: inherit;
+}
+
+.btn:hover {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+    transform: translateY(-1px);
+}
+
+.btn-icon {
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    font-size: 1.1rem;
+}
+
+.btn-primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+}
+
+.btn-primary:hover {
+    background: var(--accent-hover);
+    border-color: var(--accent-hover);
+}
+
+.btn-filter {
+    padding: var(--spacing-xs) var(--spacing-md);
+    font-size: 0.85rem;
+    background: transparent;
+}
+
+.btn-filter.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+}
+
+.btn-favorite.active {
+    color: var(--warning);
+    background: rgba(255, 193, 7, 0.1);
+    border-color: var(--warning);
+}
+
+.btn-control {
+    width: 48px;
+    height: 48px;
+    font-size: 1.3rem;
+}
+
+/* Playback Bar */
+.playback-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--pico-card-background-color);
+    padding: var(--spacing-lg);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xl);
+    border-top: 2px solid var(--pico-border-color);
+    z-index: 100;
+    transform: translateY(100%);
+    transition: transform 0.3s ease;
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.playback-bar.active {
+    transform: translateY(0);
+}
+
+.playback-info {
+    min-width: 180px;
+    flex-shrink: 0;
+}
+
+.playback-title {
+    display: block;
+    font-weight: 600;
+    font-size: 1rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 250px;
+    color: var(--text-primary);
+}
+
+.playback-time {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    font-variant-numeric: tabular-nums;
+}
+
+.playback-controls {
+    display: flex;
+    gap: var(--spacing-sm);
+    flex-shrink: 0;
+}
+
+.playback-progress {
+    flex: 1;
+    max-width: 500px;
+}
+
+.progress-bar {
+    height: 8px;
+    background: var(--bg-card);
+    border-radius: 4px;
+    overflow: hidden;
+    cursor: pointer;
+    border: 1px solid var(--pico-border-color);
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent-hover));
+    width: 0%;
+    transition: width 0.1s linear;
+    box-shadow: 0 0 8px rgba(233, 69, 96, 0.5);
+}
+
+/* Loading & Empty States */
+.loading, .empty-state {
+    text-align: center;
+    padding: var(--spacing-xl);
+    color: var(--text-secondary);
+}
+
+.empty-state p {
+    margin-bottom: var(--spacing-md);
+}
+
+/* Error Pages */
+.error-page {
+    text-align: center;
+    padding: calc(var(--spacing-xl) * 3);
+}
+
+.error-page h1 {
+    font-size: 6rem;
+    color: var(--accent);
+    margin-bottom: var(--spacing-md);
+}
+
+.error-page p {
+    font-size: 1.5rem;
+    margin-bottom: var(--spacing-xl);
+    color: var(--text-secondary);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .header h1 {
+        font-size: 2rem;
+    }
+    
+    .stats-bar {
+        grid-template-columns: repeat(2, 1fr);
+        padding: var(--spacing-md);
+        gap: var(--spacing-md);
+    }
+    
+    .stat-value {
+        font-size: 1.5rem;
+    }
+    
+    .calendar-section,
+    .recordings-section {
+        padding: var(--spacing-md);
+    }
+    
+    .calendar-day {
+        font-size: 0.75rem;
+    }
+    
+    .recording-item {
+        flex-direction: column;
+        gap: var(--spacing-sm);
+        align-items: flex-start;
+    }
+    
+    .recording-actions {
+        width: 100%;
+        justify-content: flex-end;
+    }
+    
+    .playback-bar {
+        flex-wrap: wrap;
+        padding: var(--spacing-md);
+        gap: var(--spacing-md);
+    }
+    
+    .playback-info {
+        min-width: auto;
+        flex: 1;
+    }
+    
+    .playback-progress {
+        width: 100%;
+        order: -1;
+        max-width: none;
+    }
+    
+    .download-content {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 480px) {
+    .container {
+        padding: var(--spacing-sm);
+    }
+    
+    .header h1 {
+        font-size: 1.5rem;
+    }
+    
+    .stats-bar {
+        grid-template-columns: 1fr 1fr;
+        gap: var(--spacing-sm);
+    }
+    
+    .btn-icon {
+        width: 32px;
+        height: 32px;
+        font-size: 0.9rem;
+    }
+    
+    .btn-control {
+        width: 40px;
+        height: 40px;
+        font-size: 1.1rem;
+    }
+}
