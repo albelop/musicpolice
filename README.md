@@ -36,14 +36,52 @@ Alternatively, if your piano provides USB bus power, you may be able to power th
 
 ## Installation
 
-### 1. Install System Dependencies
+### Quick Install (Recommended)
+
+The automated installation script handles all dependencies, virtual environment setup, and user permissions:
+
+```bash
+cd /home/pi
+git clone <your-repo-url> musicpolice
+cd musicpolice
+chmod +x install.sh setup_service.sh
+./install.sh
+```
+
+**Important:** After running `install.sh`, you need to log out and log back in for audio group permissions to take effect:
+- **Raspberry Pi OS Lite**: Type `exit`, then log back in
+- **Raspberry Pi OS Desktop**: Menu → Log Out → Log back in
+- **OR** simply reboot: `sudo reboot`
+
+After logging back in, install the systemd services for automatic startup:
+
+```bash
+cd /home/pi/musicpolice
+./setup_service.sh
+```
+
+This installs MusicPolice as background services that:
+- Start automatically on boot
+- Run in the background (no need to keep terminals open)
+- Restart automatically if they crash
+- Can be controlled with `systemctl` commands
+
+**Done!** The recorder and web interface are now running. Access the web interface at `http://raspberrypi.local:5000`
+
+---
+
+### Manual Installation (Alternative)
+
+If you prefer to install step-by-step or troubleshoot issues:
+
+#### 1. Install System Dependencies
 
 ```bash
 sudo apt update
-sudo apt install -y python3-pip python3-venv libasound2-dev libjack-dev
+sudo apt install -y git python3-pip python3-venv libasound2-dev libjack-dev
 ```
 
-### 2. Clone and Setup
+#### 2. Clone and Setup
 
 ```bash
 cd /home/pi
@@ -58,14 +96,18 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 3. Add User to Audio Group
+#### 3. Add User to Audio Group
 
 ```bash
 sudo usermod -a -G audio $USER
-# Log out and back in for this to take effect
 ```
 
-### 4. Test MIDI Connection
+**Log out and back in** for this to take effect:
+- **Raspberry Pi OS Lite**: Type `exit`, then log back in  
+- **Raspberry Pi OS Desktop**: Menu → Log Out → Log back in
+- **OR** reboot: `sudo reboot`
+
+#### 4. Test MIDI Connection
 
 Connect your piano via USB, then:
 
@@ -77,28 +119,86 @@ aplaymidi -l
 python3 -c "import mido; print(mido.get_input_names())"
 ```
 
-### 5. Install Services (Optional but Recommended)
+#### 5. Install Services (Recommended)
+
+To run MusicPolice as a background service that starts on boot:
 
 ```bash
-chmod +x install.sh setup_service.sh
-./install.sh
+chmod +x setup_service.sh
 ./setup_service.sh
 ```
 
+**What the services do:**
+- `musicpolice.service` - Runs the MIDI recorder continuously
+- `musicpolice-web.service` - Runs the web interface
+- Both start automatically when your Raspberry Pi boots
+- Both restart automatically if they crash
+- Logs available via `sudo journalctl -u musicpolice` and `sudo journalctl -u musicpolice-web`
+
 ## Usage
 
-### Manual Start
+### If Services Are Installed
+
+If you ran `./setup_service.sh`, both the recorder and web interface are already running! Just access the web interface.
+
+To manage the services:
+```bash
+# Check status
+sudo systemctl status musicpolice musicpolice-web
+
+# View logs
+sudo journalctl -u musicpolice -f
+
+# Restart
+sudo systemctl restart musicpolice musicpolice-web
+
+# Stop
+sudo systemctl stop musicpolice musicpolice-web
+```
+
+### Manual Start (Without Services)
+
+If you didn't install the services, you need to run both processes manually:
+
+**Option 1: Using tmux (Recommended for Raspberry Pi OS Lite)**
+
+```bash
+# Install tmux if not already installed
+sudo apt install -y tmux
+
+# Start tmux session
+tmux
+
+# Start recorder
+cd /home/pi/musicpolice
+source venv/bin/activate
+python3 recorder.py
+
+# Press Ctrl+B then " to split window horizontally
+# OR Ctrl+B then % to split vertically
+
+# In the new pane, start web interface
+cd /home/pi/musicpolice
+source venv/bin/activate
+python3 app.py
+
+# Switch between panes: Ctrl+B then arrow keys
+# Detach from tmux: Ctrl+B then D
+# Reattach later: tmux attach
+```
+
+**Option 2: Run recorder in background**
 
 ```bash
 cd /home/pi/musicpolice
 source venv/bin/activate
-
-# Start recorder (in one terminal)
-python3 recorder.py
-
-# Start web interface (in another terminal)
+python3 recorder.py &
 python3 app.py
 ```
+
+**Option 3: Use two SSH connections or terminal windows**
+
+Open two separate terminal windows/tabs and run each process in its own terminal.
 
 ### Access Web Interface
 
@@ -143,6 +243,17 @@ musicpolice/
 ```
 
 ## Troubleshooting
+
+### Git command not found
+
+If you get "git: command not found" when cloning the repository:
+
+```bash
+sudo apt update
+sudo apt install -y git
+```
+
+Then retry the clone command.
 
 ### MIDI device not detected
 

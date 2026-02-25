@@ -137,7 +137,7 @@ class MidiRecorder:
         self.current_filename = self._generate_filename()
         self.current_track = MidiTrack()
         self.recording_start_time = datetime.now()
-        self.last_event_time = time.time()
+        self.last_event_time = 0  # Reset to 0 so first message has delta 0
         self.last_event_ticks = 0
         self.note_count = 0
         self.held_notes.clear()
@@ -207,9 +207,12 @@ class MidiRecorder:
         # seconds * 1_000_000 = microseconds
         # microseconds / tempo = beats
         # beats * ticks_per_beat = ticks
+        if seconds < 0:
+            return 0
         microseconds = seconds * 1_000_000
         beats = microseconds / self.tempo
-        return int(beats * self.ticks_per_beat)
+        ticks = int(beats * self.ticks_per_beat)
+        return max(0, ticks)  # Ensure non-negative
     
     def _check_favorite_combo(self) -> bool:
         """Check if all favorite keys are currently pressed within the detection window."""
@@ -256,6 +259,8 @@ class MidiRecorder:
         # Calculate delta time in ticks
         if self.last_event_time > 0:
             delta_seconds = current_time - self.last_event_time
+            # Ensure delta is non-negative (protect against timing edge cases)
+            delta_seconds = max(0, delta_seconds)
             delta_ticks = self._seconds_to_ticks(delta_seconds)
         else:
             delta_ticks = 0

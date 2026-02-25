@@ -2,7 +2,7 @@
 # Raspberry Pi MIDI Recorder & Piano Journal
 
 midi:
-  # MIDI device name pattern (leave empty to auto-detect first available)
+  # MIDI device name pattern (partial match, case-insensitive - leave empty to auto-detect first available)
   device_pattern: ""
   # Pause threshold in seconds - creates new file after this silence duration
   pause_threshold: 3.0
