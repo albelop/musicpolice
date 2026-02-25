@@ -75,6 +75,32 @@
     font-size: 1.1rem;
 }
 
+.midi-status {
+    margin-top: var(--spacing-sm);
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.midi-label {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.midi-device {
+    font-family: monospace;
+    padding: 0.2rem 0.5rem;
+    border-radius: var(--radius-sm);
+    background-color: var(--bg-card);
+}
+
+.midi-device.connected {
+    color: var(--success);
+}
+
+.midi-device.disconnected {
+    color: var(--warning);
+}
+
 /* Stats Bar */
 .stats-bar {
     display: grid;
