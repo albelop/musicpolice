@@ -123,23 +123,26 @@ class MIDIPlaybackPage {
     }
 
     initializeVisualizer() {
-        // Configure visualizer config
+        // Configure visualizer config for falling notes animation
         const config = {
-            noteHeight: 4,
-            pixelsPerTimeStep: 60,  // Speed of falling notes
+            noteHeight: 6,
+            pixelsPerTimeStep: 120,  // Controls scroll speed - higher = faster
             noteSpacing: 1,
-            noteRGB: '78, 205, 196',  // Success color
-            activeNoteRGB: '233, 69, 96',  // Accent color (red)
+            noteRGB: '78, 205, 196',  // Teal color for all notes
+            activeNoteRGB: '233, 69, 96',  // Red color for currently playing notes
             minPitch: 21,  // A0
             maxPitch: 108  // C8
         };
 
-        // Create waterfall visualizer
+        // Create waterfall visualizer - notes fall from top like Guitar Hero
         this.visualizer = new mm.WaterfallSVGVisualizer(
             this.noteSequence,
             this.canvas,
             config
         );
+        
+        // Initial draw
+        this.visualizer.redraw(this.currentTime);
     }
 
     initializePlayer() {

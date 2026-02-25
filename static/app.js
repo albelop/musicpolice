@@ -79,12 +79,22 @@ class MusicPoliceApp {
                 this.downloadZip('day', this.selectedDate);
             }
         });
+        document.getElementById('download-today').addEventListener('click', () => {
+            const today = new Date();
+            const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+            this.downloadZip('day', todayStr);
+        });
         document.getElementById('download-current-month').addEventListener('click', () => {
             this.downloadZip('month', this.currentYear, this.currentMonth);
         });
         document.getElementById('download-current-year').addEventListener('click', () => {
             this.downloadZip('year', this.currentYear);
         });
+        // Set today's label
+        const today = new Date();
+        const todayStr = today.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+        const todayText = document.getElementById('today-text');
+        if (todayText) todayText.textContent = todayStr;
     }
 
     // ==========================================================================

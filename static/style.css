@@ -60,6 +60,10 @@
     font-size: 2.5rem;
     font-weight: 700;
     margin-bottom: var(--spacing-xs);
+    
+}
+
+.header h1 span{
     background: linear-gradient(135deg, var(--accent), var(--success));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -337,7 +341,7 @@
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-md);
+    gap: var(--spacing-sm);
     padding-right: var(--spacing-xs);
 }
 
@@ -364,7 +368,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: var(--spacing-md);
+    padding: var(--spacing-sm) var(--spacing-md);
     background: var(--bg-card);
     border-radius: var(--radius-md);
     border: 1px solid var(--pico-border-color);
@@ -385,20 +389,23 @@
 
 .recording-info {
     display: flex;
-    flex-direction: column;
-    gap: var(--spacing-xs);
+    flex-direction: row;
+    gap: var(--spacing-md);
+    align-items: baseline;
     flex: 1;
 }
 
 .recording-time {
     font-weight: 600;
     color: var(--text-primary);
-    font-size: 1rem;
+    font-size: 0.95rem;
+    min-width: 65px;
 }
 
 .recording-duration {
     font-size: 0.85rem;
     color: var(--text-secondary);
+    min-width: 50px;
 }
 
 .recording-notes {
@@ -606,7 +613,14 @@
     
     .recording-item {
         flex-direction: column;
-        gap: var(--spacing-sm);
+        gap: var(--spacing-xs);
+        align-items: flex-start;
+        padding: var(--spacing-sm);
+    }
+    
+    .recording-info {
+        flex-direction: column;
+        gap: 2px;
         align-items: flex-start;
     }
     
