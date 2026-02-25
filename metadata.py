@@ -78,10 +78,16 @@ class MetadataManager:
     
     def get_recording(self, filename: str) -> Optional[dict]:
         """Get metadata for a specific recording."""
+        # Reload index from disk to get latest data
+        with self._lock:
+            self._index = self._load_index()
         return self._index["recordings"].get(filename)
     
     def get_all_recordings(self) -> list:
         """Get all recordings sorted by start time (newest first)."""
+        # Reload index from disk to get latest recordings from recorder process
+        with self._lock:
+            self._index = self._load_index()
         recordings = list(self._index["recordings"].values())
         recordings.sort(key=lambda x: x["start_time"], reverse=True)
         return recordings
