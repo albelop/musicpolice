@@ -381,30 +381,8 @@ class MidiRecorder:
         self.last_event_time = current_time
     
     def start(self):
-        """Start the MIDI recorder."""
+        """Start the MIDI recorder with automatic reconnection."""
         logger.info("Starting MusicPolice MIDI Recorder...")
-        
-        # Find MIDI device
-        device_name = self._find_midi_device()
-        if not device_name:
-            logger.error("No MIDI input device found. Please connect your piano.")
-            logger.info("Waiting for MIDI device...")
-            
-            # Wait for device
-            while not device_name and self.running:
-                time.sleep(2)
-                device_name = self._find_midi_device()
-            
-            if not device_name:
-                return
-        
-        # Open MIDI port
-        try:
-            self.input_port = mido.open_input(device_name)
-            logger.info(f"Opened MIDI input: {device_name}")
-        except Exception as e:
-            logger.error(f"Failed to open MIDI input: {e}")
-            return
         
         self.running = True
         logger.info("Recording... Press Ctrl+C to stop.")
@@ -412,18 +390,61 @@ class MidiRecorder:
         logger.info(f"Split pedal: CC {self.split_pedal_cc}")
         logger.info(f"Pause threshold: {self.pause_threshold} seconds")
         
-        # Main recording loop
-        try:
-            while self.running:
-                # Use timeout to allow checking self.running periodically
-                msg = self.input_port.receive(block=True)
-                if msg:
-                    self._process_message(msg)
-                    
-        except Exception as e:
-            logger.error(f"Error in recording loop: {e}")
-        finally:
-            self._cleanup()
+        # Main loop with automatic reconnection
+        while self.running:
+            try:
+                # Find MIDI device
+                device_name = self._find_midi_device()
+                if not device_name:
+                    logger.warning("No MIDI input device found. Waiting for piano...")
+                    time.sleep(2)
+                    continue
+                
+                # Open MIDI port
+                try:
+                    self.input_port = mido.open_input(device_name)
+                    logger.info(f"Opened MIDI input: {device_name}")
+                except Exception as e:
+                    logger.error(f"Failed to open MIDI input: {e}")
+                    time.sleep(2)
+                    continue
+                
+                # Recording loop
+                logger.info("Ready to record!")
+                while self.running:
+                    try:
+                        msg = self.input_port.receive(block=True)
+                        if msg:
+                            self._process_message(msg)
+                    except Exception as e:
+                        logger.error(f"Error receiving MIDI message: {e}")
+                        logger.info("Connection lost. Will attempt to reconnect...")
+                        break  # Break inner loop to reconnect
+                        
+            except Exception as e:
+                logger.error(f"Error in recording loop: {e}")
+            finally:
+                # Close current port before reconnecting
+                if self.input_port:
+                    try:
+                        self.input_port.close()
+                        logger.debug("Closed MIDI input port")
+                    except Exception:
+                        pass
+                    self.input_port = None
+                
+                # Save any in-progress recording
+                if self.is_recording:
+                    logger.info("Saving in-progress recording before reconnect...")
+                    self._save_current_recording()
+                
+                # Wait before reconnecting (unless stopping)
+                if self.running:
+                    logger.info("Waiting 3 seconds before reconnection attempt...")
+                    time.sleep(3)
+        
+        # Final cleanup when stopping
+        self._cleanup()
     
     def stop(self):
         """Stop the recorder gracefully."""

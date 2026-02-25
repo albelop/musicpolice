@@ -15,6 +15,7 @@ import io
 import tempfile
 
 import yaml
+import mido
 from flask import Flask, jsonify, render_template, request, send_file, abort
 
 from metadata import MetadataManager
@@ -226,6 +227,61 @@ def api_playback_status():
         "success": True,
         "status": player.get_status()
     })
+
+
+@app.route('/api/midi/status')
+def api_midi_status():
+    """Get MIDI device status."""
+    try:
+        input_devices = mido.get_input_names()
+        output_devices = mido.get_output_names()
+        
+        # Try to match the configured device pattern
+        device_pattern = config.get("midi", {}).get("device_pattern", "")
+        
+        connected_input = None
+        connected_output = None
+        
+        if input_devices:
+            if device_pattern:
+                for name in input_devices:
+                    if device_pattern.lower() in name.lower():
+                        connected_input = name
+                        break
+            if not connected_input:
+                connected_input = input_devices[0]
+        
+        if output_devices:
+            if device_pattern:
+                for name in output_devices:
+                    if device_pattern.lower() in name.lower():
+                        connected_output = name
+                        break
+            if not connected_output:
+                connected_output = output_devices[0]
+        
+        return jsonify({
+            "success": True,
+            "midi": {
+                "input_device": connected_input,
+                "output_device": connected_output,
+                "input_available": len(input_devices),
+                "output_available": len(output_devices),
+                "all_inputs": input_devices,
+                "all_outputs": output_devices
+            }
+        })
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": str(e),
+            "midi": {
+                "input_device": None,
+                "output_device": None,
+                "input_available": 0,
+                "output_available": 0
+            }
+        })
 
 
 # =============================================================================

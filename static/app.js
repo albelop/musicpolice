@@ -13,6 +13,7 @@ class MusicPoliceApp {
         this.recordings = [];
         this.playbackStatus = null;
         this.playbackPollInterval = null;
+        this.midiStatusPollInterval = null;
 
         // Bind methods
         this.init = this.init.bind(this);
@@ -35,11 +36,24 @@ class MusicPoliceApp {
 
         // Start playback status polling
         this.startPlaybackPolling();
+        
+        // Start MIDI status polling
+        this.startMidiStatusPolling();
+    }
+
+    // Helper method to safely add event listener
+    addEventListenerIfExists(id, event, callback) {
+        const element = document.getElementById(id);
+        if (element) {
+            element.addEventListener(event, callback);
+        } else {
+            console.warn(`Element with id '${id}' not found`);
+        }
     }
 
     setupEventListeners() {
         // Calendar navigation
-        document.getElementById('prev-month').addEventListener('click', () => {
+        this.addEventListenerIfExists('prev-month', 'click', () => {
             this.currentMonth--;
             if (this.currentMonth < 1) {
                 this.currentMonth = 12;
@@ -48,7 +62,7 @@ class MusicPoliceApp {
             this.loadCalendar();
         });
 
-        document.getElementById('next-month').addEventListener('click', () => {
+        this.addEventListenerIfExists('next-month', 'click', () => {
             this.currentMonth++;
             if (this.currentMonth > 12) {
                 this.currentMonth = 1;
@@ -68,26 +82,26 @@ class MusicPoliceApp {
         });
 
         // Playback controls
-        document.getElementById('btn-stop').addEventListener('click', () => this.stopPlayback());
-        document.getElementById('btn-play-pause').addEventListener('click', () => this.togglePause());
+        this.addEventListenerIfExists('btn-stop', 'click', () => this.stopPlayback());
+        this.addEventListenerIfExists('btn-play-pause', 'click', () => this.togglePause());
 
         // Download buttons
-        document.getElementById('download-all').addEventListener('click', () => this.downloadZip('all'));
-        document.getElementById('download-favorites').addEventListener('click', () => this.downloadZip('favorites'));
-        document.getElementById('download-selected-day').addEventListener('click', () => {
+        this.addEventListenerIfExists('download-all', 'click', () => this.downloadZip('all'));
+        this.addEventListenerIfExists('download-favorites', 'click', () => this.downloadZip('favorites'));
+        this.addEventListenerIfExists('download-selected-day', 'click', () => {
             if (this.selectedDate) {
                 this.downloadZip('day', this.selectedDate);
             }
         });
-        document.getElementById('download-today').addEventListener('click', () => {
+        this.addEventListenerIfExists('download-today', 'click', () => {
             const today = new Date();
             const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
             this.downloadZip('day', todayStr);
         });
-        document.getElementById('download-current-month').addEventListener('click', () => {
+        this.addEventListenerIfExists('download-current-month', 'click', () => {
             this.downloadZip('month', this.currentYear, this.currentMonth);
         });
-        document.getElementById('download-current-year').addEventListener('click', () => {
+        this.addEventListenerIfExists('download-current-year', 'click', () => {
             this.downloadZip('year', this.currentYear);
         });
         // Set today's label
@@ -466,10 +480,45 @@ class MusicPoliceApp {
         // Trigger download
         window.location.href = url;
     }
+
+    // ==========================================================================
+    // MIDI Status
+    // ==========================================================================
+
+    async loadMidiStatus() {
+        const data = await this.fetchApi('/api/midi/status');
+        if (data.success && data.midi) {
+            this.updateMidiStatusUI(data.midi);
+        }
+    }
+
+    updateMidiStatusUI(midi) {
+        const deviceEl = document.getElementById('midi-device');
+        if (!deviceEl) return;
+
+        if (midi.input_device || midi.output_device) {
+            const device = midi.input_device || midi.output_device;
+            deviceEl.textContent = `✓ ${device}`;
+            deviceEl.className = 'midi-device connected';
+        } else {
+            deviceEl.textContent = '✗ No device connected';
+            deviceEl.className = 'midi-device disconnected';
+        }
+    }
+
+    startMidiStatusPolling() {
+        // Initial load
+        this.loadMidiStatus();
+        
+        // Poll every 5 seconds
+        this.midiStatusPollInterval = setInterval(() => {
+            this.loadMidiStatus();
+        }, 5000);
+    }
 }
 
-// Initialize app when DOM is ready
-document.addEventListener('DOMContentLoaded', () => {
+// At the end of the file, instantiate and initialize the app after DOM is loaded
+window.addEventListener('DOMContentLoaded', () => {
     const app = new MusicPoliceApp();
     app.init();
 });
