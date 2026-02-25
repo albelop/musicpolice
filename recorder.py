@@ -162,15 +162,49 @@ class MidiRecorder:
         # Add end of track
         self.current_track.append(MetaMessage('end_of_track', time=0))
         
-        # Validate all message times are non-negative before saving
-        for i, msg in enumerate(self.current_track):
-            if hasattr(msg, 'time') and msg.time < 0:
-                logger.error(f"Found negative time at index {i}: {msg} (time={msg.time}), forcing to 0")
-                msg.time = 0
+        # Create a clean track with validated message times - rebuild each message
+        clean_track = MidiTrack()
+        for msg in self.current_track:
+            msg_time = max(0, getattr(msg, 'time', 0))
+            
+            try:
+                if msg.type == 'set_tempo':
+                    clean_msg = MetaMessage('set_tempo', tempo=msg.tempo, time=msg_time)
+                elif msg.type == 'end_of_track':
+                    clean_msg = MetaMessage('end_of_track', time=msg_time)
+                elif msg.type == 'note_on':
+                    clean_msg = Message('note_on', note=msg.note, velocity=msg.velocity,
+                                       channel=msg.channel, time=msg_time)
+                elif msg.type == 'note_off':
+                    clean_msg = Message('note_off', note=msg.note, velocity=msg.velocity,
+                                       channel=msg.channel, time=msg_time)
+                elif msg.type == 'control_change':
+                    clean_msg = Message('control_change', control=msg.control, value=msg.value,
+                                       channel=msg.channel, time=msg_time)
+                elif msg.type == 'program_change':
+                    clean_msg = Message('program_change', program=msg.program,
+                                       channel=msg.channel, time=msg_time)
+                elif msg.type == 'aftertouch':
+                    clean_msg = Message('aftertouch', value=msg.value,
+                                       channel=msg.channel, time=msg_time)
+                elif msg.type == 'polytouch':
+                    clean_msg = Message('polytouch', note=msg.note, value=msg.value,
+                                       channel=msg.channel, time=msg_time)
+                elif msg.type == 'pitchwheel':
+                    clean_msg = Message('pitchwheel', pitch=msg.pitch,
+                                       channel=msg.channel, time=msg_time)
+                else:
+                    logger.debug(f"Skipping unknown message type: {msg.type}")
+                    continue
+                    
+                clean_track.append(clean_msg)
+            except Exception as e:
+                logger.error(f"Error rebuilding message {msg}: {e}")
+                continue
         
-        # Create MIDI file
+        # Create MIDI file with clean track
         mid = MidiFile(ticks_per_beat=self.ticks_per_beat)
-        mid.tracks.append(self.current_track)
+        mid.tracks.append(clean_track)
         
         # Save file
         filepath = self.recordings_dir / self.current_filename
@@ -299,20 +333,38 @@ class MidiRecorder:
         # Create MIDI message with delta time
         try:
             # Ensure delta_ticks is non-negative and valid
-            if delta_ticks < 0:
-                logger.warning(f"Negative delta_ticks detected: {delta_ticks}, forcing to 0")
-                delta_ticks = 0
+            delta_ticks = max(0, delta_ticks)
             
-            # Convert mido message to track message with timing
-            midi_msg = msg.copy(time=delta_ticks)
-            
-            # Validate the message time is non-negative
-            if hasattr(midi_msg, 'time') and midi_msg.time < 0:
-                logger.error(f"Message has negative time after copy: {midi_msg}, forcing to 0")
-                midi_msg.time = 0
-            
-            self.current_track.append(midi_msg)
-            logger.debug(f"Added message: {msg.type} with delta_ticks={delta_ticks}")
+            # Only record channel messages (note_on, note_off, control_change, etc.)
+            if msg.type in ('note_on', 'note_off', 'control_change', 'program_change', 
+                           'aftertouch', 'polytouch', 'pitchwheel'):
+                # Build a new message to avoid any inherited timing issues
+                if msg.type == 'note_on':
+                    midi_msg = Message('note_on', note=msg.note, velocity=msg.velocity, 
+                                       channel=msg.channel, time=delta_ticks)
+                elif msg.type == 'note_off':
+                    midi_msg = Message('note_off', note=msg.note, velocity=msg.velocity,
+                                       channel=msg.channel, time=delta_ticks)
+                elif msg.type == 'control_change':
+                    midi_msg = Message('control_change', control=msg.control, value=msg.value,
+                                       channel=msg.channel, time=delta_ticks)
+                elif msg.type == 'program_change':
+                    midi_msg = Message('program_change', program=msg.program,
+                                       channel=msg.channel, time=delta_ticks)
+                elif msg.type == 'aftertouch':
+                    midi_msg = Message('aftertouch', value=msg.value,
+                                       channel=msg.channel, time=delta_ticks)
+                elif msg.type == 'polytouch':
+                    midi_msg = Message('polytouch', note=msg.note, value=msg.value,
+                                       channel=msg.channel, time=delta_ticks)
+                elif msg.type == 'pitchwheel':
+                    midi_msg = Message('pitchwheel', pitch=msg.pitch,
+                                       channel=msg.channel, time=delta_ticks)
+                else:
+                    return  # Skip unknown message types
+                
+                self.current_track.append(midi_msg)
+                logger.debug(f"Added message: {msg.type} with delta_ticks={delta_ticks}")
         except Exception as e:
             logger.error(f"Could not add message to track: {e}, msg={msg}, delta_ticks={delta_ticks}")
         
