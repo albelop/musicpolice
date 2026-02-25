@@ -162,6 +162,12 @@ class MidiRecorder:
         # Add end of track
         self.current_track.append(MetaMessage('end_of_track', time=0))
         
+        # Validate all message times are non-negative before saving
+        for i, msg in enumerate(self.current_track):
+            if hasattr(msg, 'time') and msg.time < 0:
+                logger.error(f"Found negative time at index {i}: {msg} (time={msg.time}), forcing to 0")
+                msg.time = 0
+        
         # Create MIDI file
         mid = MidiFile(ticks_per_beat=self.ticks_per_beat)
         mid.tracks.append(self.current_track)
@@ -292,11 +298,23 @@ class MidiRecorder:
         
         # Create MIDI message with delta time
         try:
+            # Ensure delta_ticks is non-negative and valid
+            if delta_ticks < 0:
+                logger.warning(f"Negative delta_ticks detected: {delta_ticks}, forcing to 0")
+                delta_ticks = 0
+            
             # Convert mido message to track message with timing
             midi_msg = msg.copy(time=delta_ticks)
+            
+            # Validate the message time is non-negative
+            if hasattr(midi_msg, 'time') and midi_msg.time < 0:
+                logger.error(f"Message has negative time after copy: {midi_msg}, forcing to 0")
+                midi_msg.time = 0
+            
             self.current_track.append(midi_msg)
+            logger.debug(f"Added message: {msg.type} with delta_ticks={delta_ticks}")
         except Exception as e:
-            logger.debug(f"Could not add message to track: {e}")
+            logger.error(f"Could not add message to track: {e}, msg={msg}, delta_ticks={delta_ticks}")
         
         self.last_event_time = current_time
     
