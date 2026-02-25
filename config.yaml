@@ -6,6 +6,9 @@ midi:
   device_pattern: "roland"
   # Pause threshold in seconds - creates new file after this silence duration
   pause_threshold: 3.0
+  # Split pedal CC number - pressing this pedal saves current recording and starts a new one
+  # Common values: 64 (sustain), 66 (sostenuto), 67 (soft)
+  split_pedal_cc: 66
 
 favorite:
   # MIDI notes for favorite key combination (D#7, F#7, G#7 - top 3 black keys)

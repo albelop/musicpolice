@@ -41,6 +41,7 @@ class MidiRecorder:
         
         # Configuration
         self.pause_threshold = self.config["midi"]["pause_threshold"]
+        self.split_pedal_cc = self.config["midi"].get("split_pedal_cc", 66)  # CC 66 = sostenuto pedal
         self.favorite_key_combo = set(self.config["favorite"]["key_combo"])
         self.favorite_detection_window = self.config["favorite"]["detection_window_ms"] / 1000.0
         self.recordings_dir = Path(self.config["storage"]["recordings_dir"])
@@ -91,7 +92,7 @@ class MidiRecorder:
         except FileNotFoundError:
             logger.warning(f"Config file not found: {config_path}, using defaults")
             return {
-                "midi": {"pause_threshold": 3.0, "device_pattern": ""},
+                "midi": {"pause_threshold": 3.0, "device_pattern": "", "split_pedal_cc": 66},
                 "favorite": {"key_combo": [87, 90, 92], "detection_window_ms": 150},
                 "storage": {"recordings_dir": "recordings", "favorites_dir": "favs"},
                 "logging": {"level": "INFO"}
@@ -281,6 +282,15 @@ class MidiRecorder:
                         'reset', 'songpos', 'song_select'):
             return
         
+        # Check for split pedal (triggers manual split of recording)
+        if msg.type == 'control_change' and msg.control == self.split_pedal_cc and msg.value > 0:
+            if self.is_recording:
+                logger.info(f"Split pedal pressed (CC {self.split_pedal_cc}), saving and starting new recording")
+                self._save_current_recording()
+                self._start_new_recording()
+                self.last_event_time = current_time
+                return  # Don't record the split pedal event itself
+        
         # Check for pause/silence (only if we have held notes released)
         if self.is_recording and len(self.held_notes) == 0:
             silence_duration = current_time - self.last_event_time
@@ -399,6 +409,7 @@ class MidiRecorder:
         self.running = True
         logger.info("Recording... Press Ctrl+C to stop.")
         logger.info(f"Favorite combo: MIDI notes {sorted(self.favorite_key_combo)}")
+        logger.info(f"Split pedal: CC {self.split_pedal_cc}")
         logger.info(f"Pause threshold: {self.pause_threshold} seconds")
         
         # Main recording loop
