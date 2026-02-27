@@ -6,13 +6,32 @@
     <title>MIDI Playback - MusicPolice</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
     <link rel="stylesheet" href="/static/style.css">
-    <script src="https://cdn.jsdelivr.net/npm/@magenta/music@^1.23.1"></script>
+    <!-- Tone.js for audio synthesis -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <!-- MIDI parser -->
+    <script src="https://cdn.jsdelivr.net/npm/@tonejs/midi@2.0.28/build/Midi.min.js"></script>
     <style>
+        :root {
+            --piano-white-key: #f8f8f8;
+            --piano-black-key: #1a1a1a;
+            --piano-white-active: #4ecdc4;
+            --piano-black-active: #45b7aa;
+            --note-color: rgba(78, 205, 196, 0.85);
+            --note-active-color: rgba(233, 69, 96, 0.95);
+            --playhead-color: rgba(255, 255, 255, 0.8);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
         .playback-container {
             height: 100vh;
+            height: 100dvh;
             display: flex;
             flex-direction: column;
             padding: 0;
+            overflow: hidden;
         }
 
         .playback-header {
@@ -23,7 +42,7 @@
             justify-content: space-between;
             align-items: center;
             flex-shrink: 0;
-            gap: var(--spacing-lg);
+            gap: var(--spacing-md);
             flex-wrap: wrap;
         }
 
@@ -72,71 +91,103 @@
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
+            flex: 1;
+            min-width: 0;
         }
 
-        .visualizer-container {
+        .visualizer-wrapper {
             flex: 1;
-            background: var(--bg-primary);
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+            position: relative;
+            background: #0d1117;
+        }
+
+        .piano-roll-container {
+            flex: 1;
             position: relative;
             overflow: hidden;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            cursor: pointer;
         }
 
-        #waterfall-canvas {
+        #piano-roll-canvas {
             width: 100%;
-            max-width: 1400px;
             height: 100%;
+            display: block;
+        }
+
+        .piano-keyboard-container {
+            flex-shrink: 0;
+            background: linear-gradient(180deg, #2a2a2a 0%, #1a1a1a 100%);
+            border-top: 2px solid #333;
+            position: relative;
+        }
+
+        #piano-keyboard-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
         }
 
         .playback-controls-bar {
-            padding: var(--spacing-lg);
+            padding: var(--spacing-md) var(--spacing-lg);
             background: var(--pico-card-background-color);
             border-top: 2px solid var(--pico-border-color);
             display: flex;
             flex-direction: column;
-            gap: var(--spacing-md);
+            gap: var(--spacing-sm);
             flex-shrink: 0;
         }
 
         .controls-row {
             display: flex;
             align-items: center;
-            gap: var(--spacing-lg);
+            gap: var(--spacing-md);
         }
 
         .time-display {
             font-variant-numeric: tabular-nums;
-            min-width: 120px;
-            font-size: 1.1rem;
+            min-width: 110px;
+            font-size: 1rem;
+            text-align: center;
         }
 
         .control-buttons {
             display: flex;
-            gap: var(--spacing-sm);
+            gap: var(--spacing-xs);
+        }
+
+        .control-buttons .btn {
+            padding: 8px 16px;
+            min-width: 44px;
         }
 
         .progress-container {
             flex: 1;
+            min-width: 100px;
         }
 
         .progress-bar-playback {
-            height: 10px;
+            height: 8px;
             background: var(--bg-card);
-            border-radius: 5px;
+            border-radius: 4px;
             overflow: hidden;
             cursor: pointer;
             border: 1px solid var(--pico-border-color);
             position: relative;
         }
 
+        .progress-bar-playback:hover {
+            height: 12px;
+        }
+
         .progress-fill-playback {
             height: 100%;
             background: linear-gradient(90deg, var(--accent), var(--accent-hover));
             width: 0%;
-            transition: width 0.1s linear;
-            box-shadow: 0 0 10px rgba(233, 69, 96, 0.6);
+            transition: width 0.05s linear;
+            box-shadow: 0 0 8px rgba(233, 69, 96, 0.5);
         }
 
         .loading-overlay {
@@ -145,11 +196,12 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: var(--bg-primary);
+            background: rgba(13, 17, 23, 0.95);
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
-            z-index: 10;
+            z-index: 100;
         }
 
         .loading-overlay.hidden {
@@ -173,28 +225,100 @@
             color: var(--accent);
             text-align: center;
             padding: var(--spacing-xl);
+            font-size: 1.2rem;
         }
 
+        .error-message.hidden {
+            display: none;
+        }
+
+        /* Responsive styles */
         @media (max-width: 768px) {
             .playback-header {
                 flex-direction: column;
                 gap: var(--spacing-sm);
-                align-items: flex-start;
+                align-items: stretch;
+                padding: var(--spacing-sm) var(--spacing-md);
+            }
+
+            .playback-title-text {
+                font-size: 1rem;
+                text-align: center;
+            }
+
+            .playback-mode-switch {
+                justify-content: center;
+            }
+
+            .playback-mode-switch label {
+                padding: 4px 10px;
+                font-size: 0.8rem;
+            }
+
+            .playback-controls-bar {
+                padding: var(--spacing-sm) var(--spacing-md);
             }
 
             .controls-row {
-                flex-direction: column;
-                gap: var(--spacing-md);
-                width: 100%;
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: var(--spacing-sm);
+            }
+
+            .time-display {
+                order: 1;
+                font-size: 0.9rem;
+                min-width: 100px;
             }
 
             .control-buttons {
+                order: 0;
                 justify-content: center;
-                width: 100%;
             }
 
             .progress-container {
+                order: 2;
                 width: 100%;
+                flex: none;
+            }
+
+            .piano-keyboard-container {
+                min-height: 60px;
+            }
+        }
+
+        @media (min-width: 769px) {
+            .piano-keyboard-container {
+                min-height: 80px;
+                max-height: 100px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .playback-mode-switch label {
+                padding: 4px 8px;
+                font-size: 0.75rem;
+            }
+
+            .control-buttons .btn {
+                padding: 6px 12px;
+                min-width: 40px;
+                font-size: 0.9rem;
+            }
+
+            .piano-keyboard-container {
+                min-height: 50px;
+            }
+        }
+
+        /* Touch-friendly adjustments */
+        @media (hover: none) and (pointer: coarse) {
+            .progress-bar-playback {
+                height: 16px;
+            }
+            
+            .progress-bar-playback:hover {
+                height: 16px;
             }
         }
     </style>
@@ -214,30 +338,38 @@
                 <input type="radio" id="mode-both" name="playback-mode" value="both">
                 <label for="mode-both">🔊🎹 Both</label>
             </div>
-            <a href="/" role="button" class="btn">← Back to Journal</a>
+            <a href="/" role="button" class="btn">← Back</a>
         </div>
 
         <!-- Visualizer -->
-        <div class="visualizer-container">
+        <div class="visualizer-wrapper">
             <div class="loading-overlay" id="loading-overlay">
-                <div>
-                    <div class="spinner"></div>
-                    <p style="margin-top: var(--spacing-md); text-align: center;">Loading MIDI file...</p>
-                </div>
+                <div class="spinner"></div>
+                <p style="margin-top: var(--spacing-md); text-align: center;">Loading MIDI file...</p>
             </div>
             <div class="error-message hidden" id="error-message"></div>
-            <div id="waterfall-canvas"></div>
+            
+            <!-- Piano Roll Canvas -->
+            <div class="piano-roll-container" id="piano-roll-container">
+                <canvas id="piano-roll-canvas"></canvas>
+            </div>
+            
+            <!-- Piano Keyboard -->
+            <div class="piano-keyboard-container" id="piano-keyboard-container">
+                <canvas id="piano-keyboard-canvas"></canvas>
+            </div>
         </div>
 
         <!-- Controls -->
         <div class="playback-controls-bar">
             <div class="controls-row">
-                <div class="time-display" id="time-display">0:00 / 0:00</div>
                 <div class="control-buttons">
+                    <button class="btn btn-control" id="btn-rewind" title="Rewind 5s">⏪</button>
                     <button class="btn btn-control" id="btn-restart" title="Restart">⏮</button>
                     <button class="btn btn-control btn-primary" id="btn-play-pause" title="Play/Pause">▶</button>
                     <button class="btn btn-control" id="btn-stop" title="Stop">⏹</button>
                 </div>
+                <div class="time-display" id="time-display">0:00 / 0:00</div>
                 <div class="progress-container">
                     <div class="progress-bar-playback" id="progress-bar">
                         <div class="progress-fill-playback" id="progress-fill"></div>

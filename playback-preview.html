@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Playback Preview - MusicPolice</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+    <link rel="stylesheet" href="static/style.css">
+    <!-- Tone.js for audio synthesis -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <style>
+        :root {
+            --piano-white-key: #f8f8f8;
+            --piano-black-key: #1a1a1a;
+            --piano-white-active: #4ecdc4;
+            --piano-black-active: #45b7aa;
+            --note-color: rgba(78, 205, 196, 0.85);
+            --note-active-color: rgba(233, 69, 96, 0.95);
+            --playhead-color: rgba(255, 255, 255, 0.8);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        .playback-container {
+            height: 100vh;
+            height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        .playback-header {
+            padding: var(--spacing-md) var(--spacing-lg);
+            background: var(--pico-card-background-color);
+            border-bottom: 2px solid var(--pico-border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+            gap: var(--spacing-md);
+            flex-wrap: wrap;
+        }
+
+        .playback-mode-switch {
+            display: flex;
+            gap: 0;
+            background: var(--bg-card);
+            border-radius: 6px;
+            padding: 4px;
+            border: 1px solid var(--pico-border-color);
+        }
+
+        .playback-mode-switch input[type="radio"] {
+            display: none;
+        }
+
+        .playback-mode-switch label {
+            padding: 6px 14px;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+            margin: 0;
+            white-space: nowrap;
+            color: var(--pico-color);
+        }
+
+        .playback-mode-switch input[type="radio"]:checked + label {
+            background: var(--accent);
+            color: white;
+            font-weight: 600;
+        }
+
+        .playback-mode-switch label:hover {
+            background: var(--bg-primary);
+        }
+
+        .playback-mode-switch input[type="radio"]:checked + label:hover {
+            background: var(--accent-hover);
+        }
+
+        .playback-title-text {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .visualizer-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+            position: relative;
+            background: #0d1117;
+        }
+
+        .piano-roll-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        #piano-roll-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .piano-keyboard-container {
+            flex-shrink: 0;
+            background: linear-gradient(180deg, #2a2a2a 0%, #1a1a1a 100%);
+            border-top: 2px solid #333;
+            position: relative;
+        }
+
+        #piano-keyboard-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .playback-controls-bar {
+            padding: var(--spacing-md) var(--spacing-lg);
+            background: var(--pico-card-background-color);
+            border-top: 2px solid var(--pico-border-color);
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-sm);
+            flex-shrink: 0;
+        }
+
+        .controls-row {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+        }
+
+        .time-display {
+            font-variant-numeric: tabular-nums;
+            min-width: 110px;
+            font-size: 1rem;
+            text-align: center;
+        }
+
+        .control-buttons {
+            display: flex;
+            gap: var(--spacing-xs);
+        }
+
+        .control-buttons .btn {
+            padding: 8px 16px;
+            min-width: 44px;
+        }
+
+        .progress-container {
+            flex: 1;
+            min-width: 100px;
+        }
+
+        .progress-bar-playback {
+            height: 8px;
+            background: var(--bg-card);
+            border-radius: 4px;
+            overflow: hidden;
+            cursor: pointer;
+            border: 1px solid var(--pico-border-color);
+            position: relative;
+        }
+
+        .progress-bar-playback:hover {
+            height: 12px;
+        }
+
+        .progress-fill-playback {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), var(--accent-hover));
+            width: 0%;
+            transition: width 0.05s linear;
+            box-shadow: 0 0 8px rgba(233, 69, 96, 0.5);
+        }
+
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(13, 17, 23, 0.95);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+
+        .loading-overlay.hidden {
+            display: none;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid var(--pico-border-color);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            color: var(--accent);
+            text-align: center;
+            padding: var(--spacing-xl);
+            font-size: 1.2rem;
+        }
+
+        .error-message.hidden {
+            display: none;
+        }
+
+        /* Responsive styles */
+        @media (max-width: 768px) {
+            .playback-header {
+                flex-direction: column;
+                gap: var(--spacing-sm);
+                align-items: stretch;
+                padding: var(--spacing-sm) var(--spacing-md);
+            }
+
+            .playback-title-text {
+                font-size: 1rem;
+                text-align: center;
+            }
+
+            .playback-mode-switch {
+                justify-content: center;
+            }
+
+            .playback-mode-switch label {
+                padding: 4px 10px;
+                font-size: 0.8rem;
+            }
+
+            .playback-controls-bar {
+                padding: var(--spacing-sm) var(--spacing-md);
+            }
+
+            .controls-row {
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: var(--spacing-sm);
+            }
+
+            .time-display {
+                order: 1;
+                font-size: 0.9rem;
+                min-width: 100px;
+            }
+
+            .control-buttons {
+                order: 0;
+                justify-content: center;
+            }
+
+            .progress-container {
+                order: 2;
+                width: 100%;
+                flex: none;
+            }
+
+            .piano-keyboard-container {
+                min-height: 60px;
+            }
+        }
+
+        @media (min-width: 769px) {
+            .piano-keyboard-container {
+                min-height: 80px;
+                max-height: 100px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .playback-mode-switch label {
+                padding: 4px 8px;
+                font-size: 0.75rem;
+            }
+
+            .control-buttons .btn {
+                padding: 6px 12px;
+                min-width: 40px;
+                font-size: 0.9rem;
+            }
+
+            .piano-keyboard-container {
+                min-height: 50px;
+            }
+        }
+
+        /* Touch-friendly adjustments */
+        @media (hover: none) and (pointer: coarse) {
+            .progress-bar-playback {
+                height: 16px;
+            }
+            
+            .progress-bar-playback:hover {
+                height: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="playback-container">
+        <!-- Header -->
+        <div class="playback-header">
+            <h1 class="playback-title-text" id="file-title">recording_2026-02-24_143245.mid</h1>
+            <div class="playback-mode-switch">
+                <input type="radio" id="mode-browser" name="playback-mode" value="browser" checked>
+                <label for="mode-browser">🔊 Browser</label>
+                
+                <input type="radio" id="mode-piano" name="playback-mode" value="piano">
+                <label for="mode-piano">🎹 Piano</label>
+                
+                <input type="radio" id="mode-both" name="playback-mode" value="both">
+                <label for="mode-both">🔊🎹 Both</label>
+            </div>
+            <a href="preview.html" role="button" class="btn">← Back</a>
+        </div>
+
+        <!-- Visualizer -->
+        <div class="visualizer-wrapper">
+            <!-- Piano Roll Canvas -->
+            <div class="piano-roll-container" id="piano-roll-container">
+                <canvas id="piano-roll-canvas"></canvas>
+            </div>
+            
+            <!-- Piano Keyboard -->
+            <div class="piano-keyboard-container" id="piano-keyboard-container">
+                <canvas id="piano-keyboard-canvas"></canvas>
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="playback-controls-bar">
+            <div class="controls-row">
+                <div class="control-buttons">
+                    <button class="btn btn-control" id="btn-rewind" title="Rewind 5s">⏪</button>
+                    <button class="btn btn-control" id="btn-restart" title="Restart">⏮</button>
+                    <button class="btn btn-control btn-primary" id="btn-play-pause" title="Play/Pause">▶</button>
+                    <button class="btn btn-control" id="btn-stop" title="Stop">⏹</button>
+                </div>
+                <div class="time-display" id="time-display">0:00 / 2:30</div>
+                <div class="progress-container">
+                    <div class="progress-bar-playback" id="progress-bar">
+                        <div class="progress-fill-playback" id="progress-fill"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * Preview Piano Roll Visualizer
+         * Uses generated sample notes for demonstration
+         */
+        class PreviewPianoRoll {
+            constructor() {
+                // MIDI range: 21 (A0) to 108 (C8) = 88 keys
+                this.MIN_MIDI = 21;
+                this.MAX_MIDI = 108;
+                
+                // Time window in seconds to show notes falling
+                this.LOOK_AHEAD_TIME = 4;
+                
+                // Configuration
+                this.notes = this.generateSampleNotes();
+                this.duration = 150; // 2:30 in seconds
+                this.currentTime = 0;
+                this.isPlaying = false;
+                this.startTimestamp = 0;
+                this.animationId = null;
+                
+                // Tone.js synth for preview
+                this.synth = null;
+                
+                // Active notes for keyboard highlighting
+                this.activeNotes = new Set();
+                
+                // Canvas elements
+                this.rollCanvas = document.getElementById('piano-roll-canvas');
+                this.rollCtx = this.rollCanvas.getContext('2d');
+                this.keyboardCanvas = document.getElementById('piano-keyboard-canvas');
+                this.keyboardCtx = this.keyboardCanvas.getContext('2d');
+                
+                // DOM elements
+                this.rollContainer = document.getElementById('piano-roll-container');
+                this.keyboardContainer = document.getElementById('piano-keyboard-container');
+                this.timeDisplay = document.getElementById('time-display');
+                this.progressFill = document.getElementById('progress-fill');
+                this.progressBar = document.getElementById('progress-bar');
+                this.btnPlayPause = document.getElementById('btn-play-pause');
+                this.btnStop = document.getElementById('btn-stop');
+                this.btnRestart = document.getElementById('btn-restart');
+                this.btnRewind = document.getElementById('btn-rewind');
+                
+                this.init();
+            }
+            
+            /**
+             * Generate sample notes for preview
+             */
+            generateSampleNotes() {
+                const notes = [];
+                const duration = 150;
+                
+                // Generate a musical pattern (C major scale patterns, arpeggios, chords)
+                const patterns = [
+                    // C major chord progression pattern
+                    { pitches: [60, 64, 67], baseTime: 0 },      // C major
+                    { pitches: [65, 69, 72], baseTime: 2 },      // F major
+                    { pitches: [67, 71, 74], baseTime: 4 },      // G major
+                    { pitches: [60, 64, 67], baseTime: 6 },      // C major
+                ];
+                
+                // Generate repeating patterns throughout the song
+                for (let section = 0; section < duration / 8; section++) {
+                    const sectionStart = section * 8;
+                    
+                    patterns.forEach(pattern => {
+                        pattern.pitches.forEach((pitch, i) => {
+                            // Add some variation
+                            const octaveShift = Math.floor(section / 4) % 2 === 0 ? 0 : -12;
+                            const adjustedPitch = pitch + octaveShift;
+                            
+                            if (adjustedPitch >= this.MIN_MIDI && adjustedPitch <= this.MAX_MIDI) {
+                                notes.push({
+                                    midi: adjustedPitch,
+                                    time: sectionStart + pattern.baseTime + (i * 0.1),
+                                    duration: 1.5 + Math.random() * 0.5,
+                                    velocity: 0.6 + Math.random() * 0.3,
+                                    name: this.midiToNote(adjustedPitch)
+                                });
+                            }
+                        });
+                    });
+                    
+                    // Add melodic line
+                    const melody = [72, 74, 76, 77, 76, 74, 72, 71];
+                    melody.forEach((pitch, i) => {
+                        const octaveShift = Math.floor(section / 3) % 2 === 0 ? 0 : 12;
+                        const adjustedPitch = pitch + octaveShift;
+                        
+                        if (adjustedPitch >= this.MIN_MIDI && adjustedPitch <= this.MAX_MIDI) {
+                            notes.push({
+                                midi: adjustedPitch,
+                                time: sectionStart + (i * 0.5) + 0.25,
+                                duration: 0.4,
+                                velocity: 0.7 + Math.random() * 0.2,
+                                name: this.midiToNote(adjustedPitch)
+                            });
+                        }
+                    });
+                    
+                    // Add bass notes
+                    const bass = [36, 41, 43, 36];
+                    bass.forEach((pitch, i) => {
+                        notes.push({
+                            midi: pitch,
+                            time: sectionStart + (i * 2),
+                            duration: 1.8,
+                            velocity: 0.5 + Math.random() * 0.2,
+                            name: this.midiToNote(pitch)
+                        });
+                    });
+                }
+                
+                return notes.sort((a, b) => a.time - b.time);
+            }
+            
+            midiToNote(midi) {
+                const notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+                const octave = Math.floor(midi / 12) - 1;
+                const note = notes[midi % 12];
+                return `${note}${octave}`;
+            }
+            
+            isBlackKey(midi) {
+                const noteInOctave = midi % 12;
+                return [1, 3, 6, 8, 10].includes(noteInOctave);
+            }
+            
+            countWhiteKeys() {
+                let count = 0;
+                for (let midi = this.MIN_MIDI; midi <= this.MAX_MIDI; midi++) {
+                    if (!this.isBlackKey(midi)) count++;
+                }
+                return count;
+            }
+            
+            getNoteX(midi) {
+                let whiteKeyCount = 0;
+                for (let m = this.MIN_MIDI; m < midi; m++) {
+                    if (!this.isBlackKey(m)) whiteKeyCount++;
+                }
+                
+                const isBlack = this.isBlackKey(midi);
+                const whiteKeyWidth = this.rollCanvas.width / (window.devicePixelRatio || 1) / this.countWhiteKeys();
+                
+                if (isBlack) {
+                    return whiteKeyCount * whiteKeyWidth - (whiteKeyWidth * 0.3);
+                } else {
+                    return whiteKeyCount * whiteKeyWidth;
+                }
+            }
+            
+            getNoteWidth(midi) {
+                const whiteKeyWidth = this.rollCanvas.width / (window.devicePixelRatio || 1) / this.countWhiteKeys();
+                return this.isBlackKey(midi) ? whiteKeyWidth * 0.6 : whiteKeyWidth;
+            }
+            
+            init() {
+                this.setupEventListeners();
+                this.setupResizeHandler();
+                this.resizeCanvases();
+                this.initSynth();
+                this.updateTimeDisplay();
+                this.draw();
+            }
+            
+            async initSynth() {
+                this.synth = new Tone.PolySynth(Tone.Synth, {
+                    oscillator: { type: "triangle" },
+                    envelope: {
+                        attack: 0.02,
+                        decay: 0.1,
+                        sustain: 0.3,
+                        release: 0.8
+                    }
+                }).toDestination();
+                this.synth.volume.value = -6;
+            }
+            
+            setupEventListeners() {
+                this.btnPlayPause.addEventListener('click', () => this.togglePlayPause());
+                this.btnStop.addEventListener('click', () => this.stop());
+                this.btnRestart.addEventListener('click', () => this.restart());
+                this.btnRewind.addEventListener('click', () => this.rewind(5));
+                
+                this.progressBar.addEventListener('click', (e) => this.seekFromProgressBar(e));
+                this.rollCanvas.addEventListener('click', (e) => this.seekFromCanvas(e));
+                
+                this.rollCanvas.addEventListener('wheel', (e) => {
+                    e.preventDefault();
+                    const delta = e.deltaY > 0 ? 1 : -1;
+                    const seekAmount = delta * 2;
+                    this.seekTo(Math.max(0, Math.min(this.duration, this.currentTime + seekAmount)));
+                }, { passive: false });
+                
+                document.addEventListener('keydown', (e) => {
+                    if (e.target.tagName === 'INPUT') return;
+                    
+                    switch (e.code) {
+                        case 'Space':
+                            e.preventDefault();
+                            this.togglePlayPause();
+                            break;
+                        case 'Escape':
+                            this.stop();
+                            break;
+                        case 'Home':
+                            this.restart();
+                            break;
+                        case 'ArrowLeft':
+                            e.preventDefault();
+                            this.rewind(5);
+                            break;
+                        case 'ArrowRight':
+                            e.preventDefault();
+                            this.seekTo(Math.min(this.duration, this.currentTime + 5));
+                            break;
+                    }
+                });
+            }
+            
+            setupResizeHandler() {
+                let resizeTimeout;
+                window.addEventListener('resize', () => {
+                    clearTimeout(resizeTimeout);
+                    resizeTimeout = setTimeout(() => {
+                        this.resizeCanvases();
+                        this.draw();
+                    }, 100);
+                });
+            }
+            
+            resizeCanvases() {
+                const dpr = window.devicePixelRatio || 1;
+                
+                const rollRect = this.rollContainer.getBoundingClientRect();
+                this.rollCanvas.width = rollRect.width * dpr;
+                this.rollCanvas.height = rollRect.height * dpr;
+                this.rollCanvas.style.width = `${rollRect.width}px`;
+                this.rollCanvas.style.height = `${rollRect.height}px`;
+                this.rollCtx.scale(dpr, dpr);
+                
+                const keyRect = this.keyboardContainer.getBoundingClientRect();
+                this.keyboardCanvas.width = keyRect.width * dpr;
+                this.keyboardCanvas.height = keyRect.height * dpr;
+                this.keyboardCanvas.style.width = `${keyRect.width}px`;
+                this.keyboardCanvas.style.height = `${keyRect.height}px`;
+                this.keyboardCtx.scale(dpr, dpr);
+            }
+            
+            async togglePlayPause() {
+                if (this.isPlaying) {
+                    this.pause();
+                } else {
+                    await this.play();
+                }
+            }
+            
+            async play() {
+                try {
+                    await Tone.start();
+                    
+                    this.isPlaying = true;
+                    this.btnPlayPause.textContent = '⏸';
+                    
+                    this.scheduleNotes();
+                    this.startTimestamp = performance.now() - (this.currentTime * 1000);
+                    this.animationLoop();
+                    
+                } catch (error) {
+                    console.error('Playback error:', error);
+                    this.isPlaying = false;
+                    this.btnPlayPause.textContent = '▶';
+                }
+            }
+            
+            scheduleNotes() {
+                this.clearScheduledEvents();
+                
+                const now = Tone.now();
+                const startTime = this.currentTime;
+                
+                this.notes.forEach(note => {
+                    if (note.time >= startTime) {
+                        const relativeTime = note.time - startTime;
+                        
+                        Tone.Transport.schedule((time) => {
+                            this.synth.triggerAttack(
+                                Tone.Frequency(note.midi, "midi").toNote(),
+                                time,
+                                note.velocity
+                            );
+                            this.activeNotes.add(note.midi);
+                        }, now + relativeTime);
+                        
+                        Tone.Transport.schedule((time) => {
+                            this.synth.triggerRelease(
+                                Tone.Frequency(note.midi, "midi").toNote(),
+                                time
+                            );
+                            this.activeNotes.delete(note.midi);
+                        }, now + relativeTime + note.duration);
+                    }
+                });
+                
+                Tone.Transport.start();
+            }
+            
+            clearScheduledEvents() {
+                Tone.Transport.stop();
+                Tone.Transport.cancel();
+                if (this.synth) {
+                    this.synth.releaseAll();
+                }
+                this.activeNotes.clear();
+            }
+            
+            pause() {
+                this.isPlaying = false;
+                this.btnPlayPause.textContent = '▶';
+                
+                if (this.animationId) {
+                    cancelAnimationFrame(this.animationId);
+                    this.animationId = null;
+                }
+                
+                this.clearScheduledEvents();
+            }
+            
+            stop() {
+                this.pause();
+                this.currentTime = 0;
+                this.activeNotes.clear();
+                this.updateTimeDisplay();
+                this.updateProgress();
+                this.draw();
+            }
+            
+            restart() {
+                const wasPlaying = this.isPlaying;
+                this.stop();
+                if (wasPlaying) {
+                    this.play();
+                }
+            }
+            
+            rewind(seconds) {
+                this.seekTo(Math.max(0, this.currentTime - seconds));
+            }
+            
+            seekTo(time) {
+                const wasPlaying = this.isPlaying;
+                
+                if (wasPlaying) {
+                    this.pause();
+                }
+                
+                this.currentTime = Math.max(0, Math.min(time, this.duration));
+                this.activeNotes.clear();
+                this.updateTimeDisplay();
+                this.updateProgress();
+                this.draw();
+                
+                if (wasPlaying) {
+                    this.play();
+                }
+            }
+            
+            seekFromProgressBar(event) {
+                const rect = this.progressBar.getBoundingClientRect();
+                const x = event.clientX - rect.left;
+                const percentage = x / rect.width;
+                this.seekTo(percentage * this.duration);
+            }
+            
+            seekFromCanvas(event) {
+                const rect = this.rollCanvas.getBoundingClientRect();
+                const y = event.clientY - rect.top;
+                const canvasHeight = rect.height;
+                
+                const clickRatio = 1 - (y / canvasHeight);
+                const clickTime = this.currentTime + (clickRatio * this.LOOK_AHEAD_TIME);
+                
+                this.seekTo(Math.max(0, Math.min(clickTime, this.duration)));
+            }
+            
+            animationLoop() {
+                if (!this.isPlaying) return;
+                
+                const now = performance.now();
+                this.currentTime = (now - this.startTimestamp) / 1000;
+                
+                if (this.currentTime >= this.duration) {
+                    this.onPlaybackEnd();
+                    return;
+                }
+                
+                this.updateActiveNotes();
+                this.updateTimeDisplay();
+                this.updateProgress();
+                this.draw();
+                
+                this.animationId = requestAnimationFrame(() => this.animationLoop());
+            }
+            
+            updateActiveNotes() {
+                this.activeNotes.clear();
+                this.notes.forEach(note => {
+                    if (note.time <= this.currentTime && 
+                        note.time + note.duration > this.currentTime) {
+                        this.activeNotes.add(note.midi);
+                    }
+                });
+            }
+            
+            onPlaybackEnd() {
+                this.isPlaying = false;
+                this.btnPlayPause.textContent = '▶';
+                
+                if (this.animationId) {
+                    cancelAnimationFrame(this.animationId);
+                    this.animationId = null;
+                }
+                
+                this.clearScheduledEvents();
+                this.currentTime = this.duration;
+                this.activeNotes.clear();
+                this.updateTimeDisplay();
+                this.updateProgress();
+                this.draw();
+            }
+            
+            draw() {
+                this.drawPianoRoll();
+                this.drawKeyboard();
+            }
+            
+            drawPianoRoll() {
+                const ctx = this.rollCtx;
+                const dpr = window.devicePixelRatio || 1;
+                const width = this.rollCanvas.width / dpr;
+                const height = this.rollCanvas.height / dpr;
+                
+                ctx.fillStyle = '#0d1117';
+                ctx.fillRect(0, 0, width, height);
+                
+                this.drawKeyGuidelines(ctx, width, height);
+                
+                const startTime = this.currentTime;
+                const endTime = this.currentTime + this.LOOK_AHEAD_TIME;
+                
+                this.notes.forEach(note => {
+                    const noteEnd = note.time + note.duration;
+                    
+                    if (noteEnd < startTime || note.time > endTime) return;
+                    
+                    const x = this.getNoteX(note.midi);
+                    const noteWidth = this.getNoteWidth(note.midi) - 2;
+                    
+                    const timeRatio = (note.time - this.currentTime) / this.LOOK_AHEAD_TIME;
+                    const endRatio = (noteEnd - this.currentTime) / this.LOOK_AHEAD_TIME;
+                    
+                    const noteY = (1 - timeRatio) * height;
+                    const noteEndY = (1 - endRatio) * height;
+                    const noteHeight = noteY - noteEndY;
+                    
+                    ctx.fillStyle = `rgba(78, 205, 196, ${0.6 + note.velocity * 0.4})`;
+                    
+                    this.roundRect(ctx, x + 1, noteEndY, noteWidth, Math.max(noteHeight, 4), 4);
+                });
+                
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(0, height - 2);
+                ctx.lineTo(width, height - 2);
+                ctx.stroke();
+            }
+            
+            drawKeyGuidelines(ctx, width, height) {
+                const whiteKeyCount = this.countWhiteKeys();
+                const keyW = width / whiteKeyCount;
+                let whiteKeyIndex = 0;
+                
+                for (let midi = this.MIN_MIDI; midi <= this.MAX_MIDI; midi++) {
+                    if (!this.isBlackKey(midi)) {
+                        const x = whiteKeyIndex * keyW;
+                        
+                        ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+                        ctx.lineWidth = 1;
+                        ctx.beginPath();
+                        ctx.moveTo(x, 0);
+                        ctx.lineTo(x, height);
+                        ctx.stroke();
+                        
+                        whiteKeyIndex++;
+                    }
+                }
+                
+                whiteKeyIndex = 0;
+                for (let midi = this.MIN_MIDI; midi <= this.MAX_MIDI; midi++) {
+                    if (!this.isBlackKey(midi)) {
+                        whiteKeyIndex++;
+                    } else {
+                        const x = this.getNoteX(midi);
+                        const w = this.getNoteWidth(midi);
+                        ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+                        ctx.fillRect(x, 0, w, height);
+                    }
+                }
+            }
+            
+            drawKeyboard() {
+                const ctx = this.keyboardCtx;
+                const dpr = window.devicePixelRatio || 1;
+                const width = this.keyboardCanvas.width / dpr;
+                const height = this.keyboardCanvas.height / dpr;
+                
+                ctx.fillStyle = '#1a1a1a';
+                ctx.fillRect(0, 0, width, height);
+                
+                const whiteKeyCount = this.countWhiteKeys();
+                const whiteKeyW = width / whiteKeyCount;
+                const blackKeyW = whiteKeyW * 0.6;
+                const blackKeyH = height * 0.6;
+                
+                let whiteKeyIndex = 0;
+                for (let midi = this.MIN_MIDI; midi <= this.MAX_MIDI; midi++) {
+                    if (!this.isBlackKey(midi)) {
+                        const x = whiteKeyIndex * whiteKeyW;
+                        const isActive = this.activeNotes.has(midi);
+                        
+                        ctx.fillStyle = isActive ? '#4ecdc4' : '#f8f8f8';
+                        ctx.fillRect(x + 1, 0, whiteKeyW - 2, height - 2);
+                        
+                        ctx.strokeStyle = '#333';
+                        ctx.lineWidth = 1;
+                        ctx.strokeRect(x + 1, 0, whiteKeyW - 2, height - 2);
+                        
+                        if (isActive) {
+                            ctx.shadowColor = '#4ecdc4';
+                            ctx.shadowBlur = 20;
+                            ctx.fillStyle = '#4ecdc4';
+                            ctx.fillRect(x + 1, 0, whiteKeyW - 2, height - 2);
+                            ctx.shadowBlur = 0;
+                        }
+                        
+                        whiteKeyIndex++;
+                    }
+                }
+                
+                whiteKeyIndex = 0;
+                for (let midi = this.MIN_MIDI; midi <= this.MAX_MIDI; midi++) {
+                    if (!this.isBlackKey(midi)) {
+                        whiteKeyIndex++;
+                    } else {
+                        const x = whiteKeyIndex * whiteKeyW - blackKeyW / 2;
+                        const isActive = this.activeNotes.has(midi);
+                        
+                        ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+                        ctx.fillRect(x + 3, 3, blackKeyW, blackKeyH);
+                        
+                        ctx.fillStyle = isActive ? '#45b7aa' : '#1a1a1a';
+                        ctx.fillRect(x, 0, blackKeyW, blackKeyH);
+                        
+                        const gradient = ctx.createLinearGradient(x, 0, x, blackKeyH * 0.3);
+                        gradient.addColorStop(0, isActive ? 'rgba(100, 220, 210, 0.4)' : 'rgba(80, 80, 80, 0.4)');
+                        gradient.addColorStop(1, 'transparent');
+                        ctx.fillStyle = gradient;
+                        ctx.fillRect(x, 0, blackKeyW, blackKeyH * 0.3);
+                        
+                        if (isActive) {
+                            ctx.shadowColor = '#45b7aa';
+                            ctx.shadowBlur = 15;
+                            ctx.fillStyle = '#45b7aa';
+                            ctx.fillRect(x, 0, blackKeyW, blackKeyH);
+                            ctx.shadowBlur = 0;
+                        }
+                    }
+                }
+            }
+            
+            roundRect(ctx, x, y, width, height, radius) {
+                if (width < 0 || height < 0) return;
+                
+                radius = Math.min(radius, width / 2, height / 2);
+                
+                ctx.beginPath();
+                ctx.moveTo(x + radius, y);
+                ctx.lineTo(x + width - radius, y);
+                ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+                ctx.lineTo(x + width, y + height - radius);
+                ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+                ctx.lineTo(x + radius, y + height);
+                ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+                ctx.lineTo(x, y + radius);
+                ctx.quadraticCurveTo(x, y, x + radius, y);
+                ctx.closePath();
+                ctx.fill();
+            }
+            
+            updateTimeDisplay() {
+                const current = this.formatTime(this.currentTime);
+                const total = this.formatTime(this.duration);
+                this.timeDisplay.textContent = `${current} / ${total}`;
+            }
+            
+            updateProgress() {
+                const percentage = this.duration > 0 ? (this.currentTime / this.duration) * 100 : 0;
+                this.progressFill.style.width = `${percentage}%`;
+            }
+            
+            formatTime(seconds) {
+                if (!seconds || isNaN(seconds)) return '0:00';
+                const mins = Math.floor(seconds / 60);
+                const secs = Math.floor(seconds % 60);
+                return `${mins}:${secs.toString().padStart(2, '0')}`;
+            }
+        }
+
+        // Initialize when DOM is ready
+        document.addEventListener('DOMContentLoaded', () => {
+            new PreviewPianoRoll();
+        });
+    </script>
+</body>
+</html>
